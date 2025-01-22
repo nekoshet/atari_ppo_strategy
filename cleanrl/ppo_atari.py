@@ -76,6 +76,8 @@ class Args:
     """the maximum norm for the gradient clipping"""
     target_kl: float = None
     """the target KL divergence threshold"""
+    cnn_size_factor: float = 1.0
+    """a factor to multiply the layer sizes by (number of filters, number of perceptron in fc layers)"""
 
     # to be filled in runtime
     batch_size: int = 0
@@ -115,7 +117,7 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 
 
 class Agent(nn.Module):
-    def __init__(self, envs, f=1.):
+    def __init__(self, envs, f):
         super().__init__()
         self.network = nn.Sequential(
             layer_init(nn.Conv2d(4, int(32*f), 8, stride=4)),
@@ -181,7 +183,7 @@ if __name__ == "__main__":
     )
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
-    agent = Agent(envs).to(device)
+    agent = Agent(envs, args.cnn_size_factor).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
