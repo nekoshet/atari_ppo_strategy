@@ -12,7 +12,7 @@ import torch.optim as optim
 import tyro
 from torch.distributions.categorical import Categorical
 from torch.utils.tensorboard import SummaryWriter
-
+from key_frame_wrapper import KeyFrame
 from stable_baselines3.common.atari_wrappers import (  # isort:skip
     ClipRewardEnv,
     EpisodicLifeEnv,
@@ -105,6 +105,7 @@ def make_env(env_id, idx, capture_video, run_name):
         env = gym.wrappers.ResizeObservation(env, (84, 84))
         env = gym.wrappers.GrayScaleObservation(env)
         env = gym.wrappers.FrameStack(env, 4)
+        env = KeyFrame(env, key_frame_interval=4)
         return env
 
     return thunk
@@ -134,9 +135,11 @@ class Agent(nn.Module):
         self.critic = layer_init(nn.Linear(int(512*f), 1), std=1)
 
     def get_value(self, x):
+        x = x[:, 0, ...]
         return self.critic(self.network(x / 255.0))
 
     def get_action_and_value(self, x, action=None):
+        x = x[:, 0, ...]
         hidden = self.network(x / 255.0)
         logits = self.actor(hidden)
         probs = Categorical(logits=logits)

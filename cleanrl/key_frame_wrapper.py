@@ -4,6 +4,8 @@ import numpy as np
 import gymnasium as gym
 from gymnasium.spaces import Box
 
+from matplotlib import pyplot as plt
+
 
 class KeyFrame(gym.ObservationWrapper, gym.utils.RecordConstructorArgs):
     """Observation wrapper that stacks the observations in a rolling manner.
@@ -62,6 +64,24 @@ class KeyFrame(gym.ObservationWrapper, gym.utils.RecordConstructorArgs):
             low=low, high=high, dtype=self.observation_space.dtype
         )
 
+    @staticmethod
+    def show_observation(obs):
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 10))
+
+        # Plot first matrix
+        obs = [np.swapaxes(obs, 0, -1)[:, :, :3] for obs in obs]
+        obs = [np.swapaxes(obs, 0, 1) for obs in obs]
+        ax1.imshow(obs[0])
+        ax1.set_title('First Matrix')
+
+        # Plot second matrix
+        ax2.imshow(obs[1])
+        ax2.set_title('Second Matrix')
+
+        # Adjust layout and display
+        plt.tight_layout()
+        plt.show()
+
     def observation(self, observation):
         """Converts the wrappers current frames to lazy frames.
 
@@ -71,7 +91,9 @@ class KeyFrame(gym.ObservationWrapper, gym.utils.RecordConstructorArgs):
         Returns:
             :class:`LazyFrames` object for the wrapper's frame buffer,  :attr:`self.frames`
         """
-        return np.stack([self.last_key_frame, observation], axis=0)
+        output = np.stack([observation, self.last_key_frame], axis=0)
+        # \self.show_observation(output)
+        return output
 
     def step(self, action):
         """Steps through the environment, appending the observation to the frame buffer.
