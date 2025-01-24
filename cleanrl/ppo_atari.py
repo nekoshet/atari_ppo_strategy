@@ -159,13 +159,18 @@ class SAgent(nn.Module):
         super().__init__()
         self.strategy_network = create_cnn(f=1.)
         self.tactics_pp_network = create_cnn(f=0.25)
-        self.actor = layer_init(nn.Linear(int(512*1.25), envs.single_action_space.n), std=0.01)
-        self.critic = layer_init(nn.Linear(int(512*1.25), 1), std=1)
+        self.combiner = nn.Sequential(
+            layer_init(nn.Linear(int(512*1.25), 64)),
+            nn.ReLU()
+        )
+        self.actor = layer_init(nn.Linear(64, envs.single_action_space.n), std=0.01)
+        self.critic = layer_init(nn.Linear(64, 1), std=1)
 
     def apply_both(self, x):
         tactics_pp = self.tactics_pp_network(x[:, 0, ...] / 255.0)
         strategy = self.strategy_network(x[:, 1, ...] / 255.0)
         comb = torch.concat([tactics_pp, strategy], dim=-1)
+        comb = self.combiner(comb)
         return comb
 
     def get_value(self, x):
