@@ -76,8 +76,10 @@ class Args:
     """the maximum norm for the gradient clipping"""
     target_kl: float = None
     """the target KL divergence threshold"""
-    cnn_size_factor: float = 1.0
+    agent_cnn_width_factor: float = 1.0
     """a factor to multiply the layer sizes by (number of filters, number of perceptron in fc layers)"""
+    agent: str = 'agent'
+    """which agent to use (agent | sagent)"""
 
     # to be filled in runtime
     batch_size: int = 0
@@ -117,10 +119,8 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     return layer
 
 
-class Agent(nn.Module):
-    def __init__(self, envs, f):
-        super().__init__()
-        self.network = nn.Sequential(
+def create_cnn(f=1.):
+    return nn.Sequential(
             layer_init(nn.Conv2d(4, int(32*f), 8, stride=4)),
             nn.ReLU(),
             layer_init(nn.Conv2d(int(32*f), int(64*f), 4, stride=2)),
@@ -131,6 +131,12 @@ class Agent(nn.Module):
             layer_init(nn.Linear(int(64*f) * 7 * 7, int(512*f))),
             nn.ReLU(),
         )
+
+
+class Agent(nn.Module):
+    def __init__(self, envs, f):
+        super().__init__()
+        self.network = create_cnn(f=f)
         self.actor = layer_init(nn.Linear(int(512*f), envs.single_action_space.n), std=0.01)
         self.critic = layer_init(nn.Linear(int(512*f), 1), std=1)
 
@@ -141,6 +147,33 @@ class Agent(nn.Module):
     def get_action_and_value(self, x, action=None):
         x = x[:, 0, ...]
         hidden = self.network(x / 255.0)
+        logits = self.actor(hidden)
+        probs = Categorical(logits=logits)
+        if action is None:
+            action = probs.sample()
+        return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
+
+
+class SAgent(nn.Module):
+    def __init__(self, envs):
+        super().__init__()
+        self.strategy_network = create_cnn(f=1.)
+        self.tactics_pp_network = create_cnn(f=0.25)
+        self.actor = layer_init(nn.Linear(int(512*1.25), envs.single_action_space.n), std=0.01)
+        self.critic = layer_init(nn.Linear(int(512*1.25), 1), std=1)
+
+    def apply_both(self, x):
+        strategy = self.strategy_network(x[:, 0, ...] / 255.0)
+        tactics_pp = self.tactics_pp_network(x[:, 1, ...] / 255.0)
+        comb = torch.concat([strategy, tactics_pp], dim=-1)
+        return comb
+
+    def get_value(self, x):
+        hidden = self.apply_both(x)
+        return self.critic(hidden)
+
+    def get_action_and_value(self, x, action=None):
+        hidden = self.apply_both(x)
         logits = self.actor(hidden)
         probs = Categorical(logits=logits)
         if action is None:
@@ -186,7 +219,15 @@ if __name__ == "__main__":
     )
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
-    agent = Agent(envs, args.cnn_size_factor).to(device)
+    if args.agent == 'agent':
+        print(f'creating Agent with factor {args.agent_cnn_width_factor}')
+        agent = Agent(envs, f=args.agent_cnn_width_factor).to(device)
+    elif args.agent == 'sagent':
+        print('creating SAgent')
+        agent = SAgent(envs).to(device)
+    else:
+        raise ValueError(f"unknown agent type: {args.agent}")
+
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
