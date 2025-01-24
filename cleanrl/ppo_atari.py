@@ -163,9 +163,9 @@ class SAgent(nn.Module):
         self.critic = layer_init(nn.Linear(int(512*1.25), 1), std=1)
 
     def apply_both(self, x):
-        strategy = self.strategy_network(x[:, 0, ...] / 255.0)
-        tactics_pp = self.tactics_pp_network(x[:, 1, ...] / 255.0)
-        comb = torch.concat([strategy, tactics_pp], dim=-1)
+        tactics_pp = self.tactics_pp_network(x[:, 0, ...] / 255.0)
+        strategy = self.strategy_network(x[:, 1, ...] / 255.0)
+        comb = torch.concat([tactics_pp, strategy], dim=-1)
         return comb
 
     def get_value(self, x):
