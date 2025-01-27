@@ -14,7 +14,7 @@ class RewardMatrixEnv(gym.Env):
         super().__init__()
 
         # Constants
-        self.size = 64
+        self.size = 84
         self.silver_density = 0.04
         self.gold_density = 0.01
 

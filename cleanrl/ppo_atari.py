@@ -20,6 +20,8 @@ from stable_baselines3.common.atari_wrappers import (  # isort:skip
     MaxAndSkipEnv,
     NoopResetEnv,
 )
+from reward_matrix_env import RewardMatrixEnv
+from gymnasium.wrappers import TimeLimit
 
 
 @dataclass
@@ -44,7 +46,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "BreakoutNoFrameskip-v4"
     """the id of the environment"""
-    total_timesteps: int = 10000000
+    total_timesteps: int = 200000
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
     """the learning rate of the optimizer"""
@@ -93,20 +95,22 @@ class Args:
 def make_env(env_id, idx, capture_video, run_name):
     def thunk():
         if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array")
+            # env = gym.make(env_id, render_mode="human")
+            env = RewardMatrixEnv(render_mode="human")
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
-            env = gym.make(env_id)
+            env = RewardMatrixEnv()
+        env = TimeLimit(env, max_episode_steps=100)
         env = gym.wrappers.RecordEpisodeStatistics(env)
-        env = NoopResetEnv(env, noop_max=30)
-        env = MaxAndSkipEnv(env, skip=4)
-        env = EpisodicLifeEnv(env)
-        if "FIRE" in env.unwrapped.get_action_meanings():
-            env = FireResetEnv(env)
-        env = ClipRewardEnv(env)
-        env = gym.wrappers.ResizeObservation(env, (84, 84))
-        env = gym.wrappers.GrayScaleObservation(env)
-        env = gym.wrappers.FrameStack(env, 4)
+        # env = NoopResetEnv(env, noop_max=30)
+        # env = MaxAndSkipEnv(env, skip=4)
+        # env = EpisodicLifeEnv(env)
+        # if "FIRE" in env.unwrapped.get_action_meanings():
+        #     env = FireResetEnv(env)
+        # env = ClipRewardEnv(env)
+        # env = gym.wrappers.ResizeObservation(env, (84, 84))
+        # env = gym.wrappers.GrayScaleObservation(env)
+        # env = gym.wrappers.FrameStack(env, 4)
         env = KeyFrame(env, key_frame_interval=4)
         return env
 
@@ -121,7 +125,7 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 
 def create_cnn(f=1.):
     return nn.Sequential(
-            layer_init(nn.Conv2d(4, int(32*f), 8, stride=4)),
+            layer_init(nn.Conv2d(1, int(32*f), 8, stride=4)),
             nn.ReLU(),
             layer_init(nn.Conv2d(int(32*f), int(64*f), 4, stride=2)),
             nn.ReLU(),
@@ -140,12 +144,17 @@ class Agent(nn.Module):
         self.actor = layer_init(nn.Linear(int(512*f), envs.single_action_space.n), std=0.01)
         self.critic = layer_init(nn.Linear(int(512*f), 1), std=1)
 
+    @staticmethod
+    def preprocess(x):
+        output = x[:, 0, None, ...]
+        return output
+
     def get_value(self, x):
-        x = x[:, 0, ...]
+        x = self.preprocess(x)
         return self.critic(self.network(x / 255.0))
 
     def get_action_and_value(self, x, action=None):
-        x = x[:, 0, ...]
+        x = self.preprocess(x)
         hidden = self.network(x / 255.0)
         logits = self.actor(hidden)
         probs = Categorical(logits=logits)
