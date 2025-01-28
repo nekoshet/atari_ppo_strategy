@@ -1,7 +1,6 @@
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
-import random
 import pygame
 
 class CollectorEnv(gym.Env):
@@ -33,11 +32,11 @@ class CollectorEnv(gym.Env):
         self.clock = None
         self.cell_size = 60  # pixels
         self.window_size = size * self.cell_size
+        # Colors for rendering
         self.COLORS = {
-            'background': (255, 255, 255),  # White
-            'grid': (200, 200, 200),  # Light gray
-            'player': (0, 0, 255),  # Blue
-            'coin': (255, 215, 0)  # Gold
+            0: (255, 255, 255),  # Empty - White
+            1: (0, 0, 255),      # Player - Blue
+            2: (255, 215, 0)     # Coin - Gold
         }
 
         # Action space: 0=up, 1=right, 2=down, 3=left
@@ -152,50 +151,20 @@ class CollectorEnv(gym.Env):
         if self.window is None:
             return
 
-        # Fill background
-        self.window.fill(self.COLORS['background'])
+        # Create surface from state matrix
+        surface = pygame.Surface((self.window_size, self.window_size))
 
-        # Draw grid lines
-        for x in range(self.size + 1):
-            pygame.draw.line(
-                self.window,
-                self.COLORS['grid'],
-                (x * self.cell_size, 0),
-                (x * self.cell_size, self.window_size)
-            )
-            pygame.draw.line(
-                self.window,
-                self.COLORS['grid'],
-                (0, x * self.cell_size),
-                (self.window_size, x * self.cell_size)
-            )
+        # Draw each cell
+        for i in range(self.size):
+            for j in range(self.size):
+                pygame.draw.rect(
+                    surface,
+                    self.COLORS[self.grid[i, j]],
+                    (j * self.cell_size, i * self.cell_size, self.cell_size, self.cell_size)
+                )
 
-        # Draw player
-        player_center = (
-            int((self.player_position[1] + 0.5) * self.cell_size),
-            int((self.player_position[0] + 0.5) * self.cell_size)
-        )
-        pygame.draw.circle(
-            self.window,
-            self.COLORS['player'],
-            player_center,
-            self.cell_size // 3
-        )
-
-        # Draw coin
-        if self.coin_position is not None:
-            coin_center = (
-                int((self.coin_position[1] + 0.5) * self.cell_size),
-                int((self.coin_position[0] + 0.5) * self.cell_size)
-            )
-            pygame.draw.circle(
-                self.window,
-                self.COLORS['coin'],
-                coin_center,
-                self.cell_size // 4
-            )
-
-        # Update the display
+        # Copy to window and update display
+        self.window.blit(surface, (0, 0))
         pygame.display.flip()
 
         # Maintain constant game speed
@@ -223,7 +192,7 @@ class CollectorEnv(gym.Env):
 
 def main():
     # Create environment with human rendering
-    env = CollectorEnv(size=3, seed=42, render_mode="console")
+    env = CollectorEnv(size=3, seed=42, render_mode="human")
 
     # Reset and run the environment
     obs, _ = env.reset()
