@@ -20,7 +20,7 @@ from stable_baselines3.common.atari_wrappers import (  # isort:skip
     MaxAndSkipEnv,
     NoopResetEnv,
 )
-from reward_matrix_env import RewardMatrixEnv
+from collector_env import CollectorEnv
 from gymnasium.wrappers import TimeLimit
 
 
@@ -46,7 +46,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "BreakoutNoFrameskip-v4"
     """the id of the environment"""
-    total_timesteps: int = 200000
+    total_timesteps: int = 10000000
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
     """the learning rate of the optimizer"""
@@ -96,11 +96,11 @@ def make_env(env_id, idx, capture_video, run_name):
     def thunk():
         if capture_video and idx == 0:
             # env = gym.make(env_id, render_mode="human")
-            env = RewardMatrixEnv(render_mode="human")
+            env = CollectorEnv(render_mode="human")
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
-            env = RewardMatrixEnv()
-        env = TimeLimit(env, max_episode_steps=100)
+            env = CollectorEnv()
+        # env = TimeLimit(env, max_episode_steps=100)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         # env = NoopResetEnv(env, noop_max=30)
         # env = MaxAndSkipEnv(env, skip=4)
@@ -111,7 +111,7 @@ def make_env(env_id, idx, capture_video, run_name):
         # env = gym.wrappers.ResizeObservation(env, (84, 84))
         # env = gym.wrappers.GrayScaleObservation(env)
         # env = gym.wrappers.FrameStack(env, 4)
-        env = KeyFrame(env, key_frame_interval=4)
+        # env = KeyFrame(env, key_frame_interval=4)
         return env
 
     return thunk
@@ -125,15 +125,15 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 
 def create_cnn(f=1.):
     return nn.Sequential(
-            layer_init(nn.Conv2d(1, int(32*f), 8, stride=4)),
+            # layer_init(nn.Conv2d(1, int(32*f), 8, stride=4)),
+            # nn.ReLU(),
+            layer_init(nn.Conv2d(2, int(64*f), 3, stride=3)),
             nn.ReLU(),
-            layer_init(nn.Conv2d(int(32*f), int(64*f), 4, stride=2)),
-            nn.ReLU(),
-            layer_init(nn.Conv2d(int(64*f), int(64*f), 3, stride=1)),
+            layer_init(nn.Conv2d(int(64*f), int(64*f), 3, stride=3)),
             nn.ReLU(),
             nn.Flatten(),
-            layer_init(nn.Linear(int(64*f) * 7 * 7, int(512*f))),
-            nn.ReLU(),
+            # layer_init(nn.Linear(64, int(64*f))),
+            # nn.ReLU(),
         )
 
 
@@ -141,21 +141,21 @@ class Agent(nn.Module):
     def __init__(self, envs, f):
         super().__init__()
         self.network = create_cnn(f=f)
-        self.actor = layer_init(nn.Linear(int(512*f), envs.single_action_space.n), std=0.01)
-        self.critic = layer_init(nn.Linear(int(512*f), 1), std=1)
+        self.actor = layer_init(nn.Linear(int(64*f), envs.single_action_space.n), std=0.01)
+        self.critic = layer_init(nn.Linear(int(64*f), 1), std=1)
 
     @staticmethod
     def preprocess(x):
-        output = x[:, 0, None, ...]
+        output = torch.swapaxes(x, 1, -1)
         return output
 
     def get_value(self, x):
         x = self.preprocess(x)
-        return self.critic(self.network(x / 255.0))
+        return self.critic(self.network(x))
 
     def get_action_and_value(self, x, action=None):
         x = self.preprocess(x)
-        hidden = self.network(x / 255.0)
+        hidden = self.network(x)
         logits = self.actor(hidden)
         probs = Categorical(logits=logits)
         if action is None:

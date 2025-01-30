@@ -13,10 +13,10 @@ class CollectorEnv(gym.Env):
 
     metadata = {
         "render_modes": ["human", "console"],
-        "render_fps": 4,
+        "render_fps": 20,
     }
 
-    def __init__(self, size=5, max_steps=100, seed=1, render_mode=None):
+    def __init__(self, size=9, max_steps=1000, seed=1, render_mode=None):
         super(CollectorEnv, self).__init__()
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
@@ -30,7 +30,7 @@ class CollectorEnv(gym.Env):
         # rendering stuff
         self.window = None
         self.clock = None
-        self.cell_size = 60  # pixels
+        self.cell_size = 20  # pixels
         self.window_size = size * self.cell_size
         # Colors for rendering
         self.COLORS = {
@@ -48,8 +48,8 @@ class CollectorEnv(gym.Env):
         # 2 = coin
         self.observation_space = spaces.Box(
             low=0,
-            high=2,
-            shape=(size, size),
+            high=1,
+            shape=(size, size, 2),
             dtype=np.uint8
         )
 
@@ -57,15 +57,19 @@ class CollectorEnv(gym.Env):
         self.steps = None
         self.player_position = None
         self.coin_position = None
+        self.best_coin_dist = None
         self.rng = None
 
         # Initialize empty grid
-        self.grid = np.zeros((self.size, self.size), dtype=np.uint8)
+        self.grid = np.zeros((self.size, self.size, 2), dtype=np.uint8)
 
     def _set_grid(self):
         self.grid.fill(0)
-        self.grid[tuple(self.player_position)] = 1
-        self.grid[tuple(self.coin_position)] = 2
+        self.grid[tuple(self.player_position)][0] = 1
+        self.grid[tuple(self.coin_position)][1] = 1
+
+    def _coin_dist(self):
+        return np.linalg.norm(self.player_position - self.coin_position)
 
     def _place_new_coin(self):
         """Place a new coin in a random empty position."""
@@ -74,8 +78,9 @@ class CollectorEnv(gym.Env):
             new_coin_position = self.rng.integers(0, self.size, size=2)
             if not np.array_equal(new_coin_position, self.player_position):
                 self.coin_position = new_coin_position
+        self.best_coin_dist = self._coin_dist()
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
         """Reset the environment to initial state."""
         super().reset(seed=self.seed)
 
@@ -126,12 +131,13 @@ class CollectorEnv(gym.Env):
             self.player_position[1] = max(0, self.player_position[1] - 1)
 
         # Check if new position has coin
-        if np.array_equal(self.player_position, self.coin_position):
+        new_coin_dist = self._coin_dist()
+        if new_coin_dist == 0:
             reward = 1
-
-        # Place new coin if collected
-        if reward > 0:
             self._place_new_coin()
+        elif new_coin_dist < self.best_coin_dist:
+            reward = 1
+            self.best_coin_dist = new_coin_dist
 
         # inc steps
         self.steps += 1
@@ -155,11 +161,14 @@ class CollectorEnv(gym.Env):
         surface = pygame.Surface((self.window_size, self.window_size))
 
         # Draw each cell
+        elems = np.zeros(shape=(self.size, self.size), dtype=int)
+        elems[self.grid[:, :, 0] == 1] = 1
+        elems[self.grid[:, :, 1] == 1] = 2
         for i in range(self.size):
             for j in range(self.size):
                 pygame.draw.rect(
                     surface,
-                    self.COLORS[self.grid[i, j]],
+                    self.COLORS[elems[i, j]],
                     (j * self.cell_size, i * self.cell_size, self.cell_size, self.cell_size)
                 )
 
@@ -192,7 +201,7 @@ class CollectorEnv(gym.Env):
 
 def main():
     # Create environment with human rendering
-    env = CollectorEnv(size=3, seed=42, render_mode="human")
+    env = CollectorEnv(render_mode="human")
 
     # Reset and run the environment
     obs, _ = env.reset()
@@ -200,10 +209,6 @@ def main():
     while True:
         action = env.action_space.sample()
         obs, reward, done, truncated, info = env.step(action)
-
-        if reward > 0:
-            print("Coin collected!")
-
         if done:
             break
 
