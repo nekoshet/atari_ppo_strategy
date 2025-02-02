@@ -44,6 +44,8 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "BreakoutNoFrameskip-v4"
     """the id of the environment"""
+    agent_id: str = "atari_agent"
+    """the id of the agent"""
     total_timesteps: int = 10000000
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
@@ -137,7 +139,7 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     return layer
 
 
-class Agent(nn.Module):
+class AtariAgent(nn.Module):
     def __init__(self, envs):
         super().__init__()
         self.network = nn.Sequential(
@@ -164,6 +166,13 @@ class Agent(nn.Module):
         if action is None:
             action = probs.sample()
         return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
+
+
+def get_agent_factory(agent_id):
+    if agent_id == 'atari_agent':
+        return AtariAgent
+    else:
+        raise RuntimeError(f"unknown agent_id {agent_id}")
 
 
 if __name__ == "__main__":
@@ -204,7 +213,7 @@ if __name__ == "__main__":
     )
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
-    agent = Agent(envs).to(device)
+    agent = get_agent_factory(args.agent_id)(envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
