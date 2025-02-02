@@ -20,7 +20,7 @@ from stable_baselines3.common.atari_wrappers import (  # isort:skip
     MaxAndSkipEnv,
     NoopResetEnv,
 )
-
+from cleanrl.collector_env import CollectorEnv
 
 @dataclass
 class Args:
@@ -86,8 +86,15 @@ class Args:
     """the number of iterations (computed in runtime)"""
 
 
+def make_custom_base_env(env_id, **kwargs):
+    if env_id == 'collector':
+        return CollectorEnv(**kwargs)
+    else:
+        raise RuntimeError(f"unknown env_id {env_id}")
+
+
 def make_env(env_id, idx, capture_video, run_name):
-    def thunk():
+    def make_atari_env():
         if capture_video and idx == 0:
             env = gym.make(env_id, render_mode="rgb_array")
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
@@ -103,6 +110,22 @@ def make_env(env_id, idx, capture_video, run_name):
         env = gym.wrappers.ResizeObservation(env, (84, 84))
         env = gym.wrappers.GrayScaleObservation(env)
         env = gym.wrappers.FrameStack(env, 4)
+        return env
+
+    def make_custom_env():
+        if capture_video and idx == 0:
+            env = make_custom_base_env(env_id, render_mode="human")
+            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
+        else:
+            env = make_custom_base_env(env_id)
+        env = gym.wrappers.RecordEpisodeStatistics(env)
+        return env
+
+    def thunk():
+        try:
+            env = make_atari_env()
+        except:
+            env = make_custom_env()
         return env
 
     return thunk
