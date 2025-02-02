@@ -44,8 +44,8 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "BreakoutNoFrameskip-v4"
     """the id of the environment"""
-    agent_id: str = "atari_agent"
-    """the id of the agent"""
+    network_id: str = "atari_agent"
+    """the id of the agent's underlying network"""
     total_timesteps: int = 10000000
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
@@ -139,8 +139,8 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
     return layer
 
 
-class AtariAgent(nn.Module):
-    def __init__(self, envs):
+class AtariNetwork(nn.Module):
+    def __init__(self):
         super().__init__()
         self.network = nn.Sequential(
             layer_init(nn.Conv2d(4, 32, 8, stride=4)),
@@ -153,8 +153,21 @@ class AtariAgent(nn.Module):
             layer_init(nn.Linear(64 * 7 * 7, 512)),
             nn.ReLU(),
         )
-        self.actor = layer_init(nn.Linear(512, envs.single_action_space.n), std=0.01)
-        self.critic = layer_init(nn.Linear(512, 1), std=1)
+
+    def forward(self, x):
+        return self.network(x)
+
+    @staticmethod
+    def output_size(self):
+        return 512
+
+
+class Agent(nn.Module):
+    def __init__(self, network, envs):
+        super().__init__()
+        self.network = network
+        self.actor = layer_init(nn.Linear(self.network.output_size(), envs.single_action_space.n), std=0.01)
+        self.critic = layer_init(nn.Linear(self.network.output_size(), 1), std=1)
 
     def get_value(self, x):
         return self.critic(self.network(x / 255.0))
@@ -168,11 +181,11 @@ class AtariAgent(nn.Module):
         return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
 
 
-def get_agent_factory(agent_id):
-    if agent_id == 'atari_agent':
-        return AtariAgent
+def get_network(network_id):
+    if network_id == 'atari_network':
+        return AtariNetwork()
     else:
-        raise RuntimeError(f"unknown agent_id {agent_id}")
+        raise RuntimeError(f"unknown network_id {network_id}")
 
 
 if __name__ == "__main__":
@@ -213,7 +226,8 @@ if __name__ == "__main__":
     )
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
-    agent = get_agent_factory(args.agent_id)(envs).to(device)
+    network = get_network(args.network_id)
+    agent = Agent(network, envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
