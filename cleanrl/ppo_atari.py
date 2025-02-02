@@ -44,7 +44,7 @@ class Args:
     # Algorithm specific arguments
     env_id: str = "BreakoutNoFrameskip-v4"
     """the id of the environment"""
-    network_id: str = "atari_agent"
+    network_id: str = "atari_network"
     """the id of the agent's underlying network"""
     total_timesteps: int = 10000000
     """total timesteps of the experiments"""
