@@ -21,6 +21,7 @@ from stable_baselines3.common.atari_wrappers import (  # isort:skip
     NoopResetEnv,
 )
 from cleanrl.collector_env import CollectorEnv
+from key_frame_wrapper import KeyFrame
 
 @dataclass
 class Args:
@@ -121,6 +122,7 @@ def make_env(env_id, idx, capture_video, run_name):
         else:
             env = make_custom_base_env(env_id)
         env = gym.wrappers.RecordEpisodeStatistics(env)
+        env = KeyFrame(env, 4)
         return env
 
     def thunk():
