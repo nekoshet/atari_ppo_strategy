@@ -162,6 +162,25 @@ class AtariNetwork(nn.Module):
         return 512
 
 
+class Collector9x9Network(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.network = nn.Sequential(
+            layer_init(nn.Conv2d(2, 64, 3, stride=3)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(64, 64, 3, stride=3)),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+    def forward(self, x):
+        return self.network(x)
+
+    @staticmethod
+    def output_size(self):
+        return 64
+
+
 class Agent(nn.Module):
     def __init__(self, network, envs):
         super().__init__()
