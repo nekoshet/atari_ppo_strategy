@@ -93,10 +93,7 @@ class Args:
 
 
 def make_custom_base_env(env_id, **kwargs):
-    if env_id == 'collector':
-        return CollectorEnv(**kwargs)
-    else:
-        raise RuntimeError(f"unknown env_id {env_id}")
+    return globals()[env_id](**kwargs)
 
 
 def make_env(env_id, idx, capture_video, run_name):
@@ -127,7 +124,7 @@ def make_env(env_id, idx, capture_video, run_name):
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = KeyFrame(env, 3)
         env = FocusWindowWrapper(env, 5)
-        env = DisplayObservation(env)
+        # env = DisplayObservation(env)
         return env
 
     def thunk():
@@ -165,7 +162,7 @@ class AtariNetwork(nn.Module):
         return self.network(x)
 
     @staticmethod
-    def output_size(self):
+    def output_size():
         return 512
 
 
@@ -173,7 +170,7 @@ class Collector9x9Network(nn.Module):
     def __init__(self):
         super().__init__()
         self.network = nn.Sequential(
-            layer_init(nn.Conv2d(2, 64, 3, stride=3)),
+            layer_init(nn.Conv2d(3, 64, 3, stride=3)),
             nn.ReLU(),
             layer_init(nn.Conv2d(64, 64, 3, stride=3)),
             nn.ReLU(),
@@ -181,10 +178,12 @@ class Collector9x9Network(nn.Module):
         )
 
     def forward(self, x):
+        x = x[:, 1, ...]
+        x = np.swapaxes(x, 1, -1)
         return self.network(x)
 
     @staticmethod
-    def output_size(self):
+    def output_size():
         return 64
 
 
@@ -208,10 +207,7 @@ class Agent(nn.Module):
 
 
 def get_network(network_id):
-    if network_id == 'atari_network':
-        return AtariNetwork()
-    else:
-        raise RuntimeError(f"unknown network_id {network_id}")
+    return globals()[network_id]()
 
 
 if __name__ == "__main__":
