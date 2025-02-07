@@ -91,7 +91,7 @@ class KeyFrame(gym.ObservationWrapper, gym.utils.RecordConstructorArgs):
         Returns:
             :class:`LazyFrames` object for the wrapper's frame buffer,  :attr:`self.frames`
         """
-        output = np.stack([observation, self.last_key_frame], axis=0)
+        output = np.stack([self.last_key_frame, observation], axis=0)
         # \self.show_observation(output)
         return output
 
