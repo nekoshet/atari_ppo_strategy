@@ -22,6 +22,9 @@ from stable_baselines3.common.atari_wrappers import (  # isort:skip
 )
 from cleanrl.collector_env import CollectorEnv
 from key_frame_wrapper import KeyFrame
+from focus_window_wrapper import FocusWindowWrapper
+from display_observation_wrapper import DisplayObservation
+
 
 @dataclass
 class Args:
@@ -122,7 +125,9 @@ def make_env(env_id, idx, capture_video, run_name):
         else:
             env = make_custom_base_env(env_id)
         env = gym.wrappers.RecordEpisodeStatistics(env)
-        env = KeyFrame(env, 4)
+        env = KeyFrame(env, 3)
+        env = FocusWindowWrapper(env, 5)
+        env = DisplayObservation(env)
         return env
 
     def thunk():
