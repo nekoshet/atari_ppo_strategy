@@ -49,7 +49,7 @@ class CollectorEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=0,
             high=1,
-            shape=(size, size, 2),
+            shape=(size, size, 3),
             dtype=np.uint8
         )
 
@@ -61,7 +61,7 @@ class CollectorEnv(gym.Env):
         self.rng = None
 
         # Initialize empty grid
-        self.grid = np.zeros((self.size, self.size, 2), dtype=np.uint8)
+        self.grid = np.zeros((self.size, self.size, 3), dtype=np.uint8)
 
     def _set_grid(self):
         self.grid.fill(0)
@@ -113,7 +113,7 @@ class CollectorEnv(gym.Env):
         if self.render_mode == "human":
             self._render_frame()
 
-        return self.grid.copy(), {}
+        return self.grid.copy(), {'focus_pos': self.player_position}
 
     def step(self, action):
         """Execute one time step within the environment."""
@@ -150,7 +150,7 @@ class CollectorEnv(gym.Env):
         if self.render_mode == "human":
             self._render_frame()
 
-        return self.grid.copy(), reward, done, False, {}
+        return self.grid.copy(), reward, done, False, {'focus_pos': self.player_position}
 
     def _render_frame(self):
         """Render the current frame using pygame."""
