@@ -13,6 +13,7 @@ class FocusWindowWrapper(gym.Wrapper):
         window = get_surrounding_window(rel_obs, i, j, self.window_size)
         window_obs = np.zeros_like(rel_obs)
         window_obs[:window.shape[0], :window.shape[1]] = window
+        window_obs = np.expand_dims(window_obs, axis=0)
         output = np.concatenate([obs, window_obs], axis=0)
         return output
 
