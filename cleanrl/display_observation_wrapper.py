@@ -8,7 +8,7 @@ class DisplayObservation(gym.ObservationWrapper):
     def observation(self, observation: ObsType) -> WrapperObsType:
         fig, axes = plt.subplots(1, 3, figsize=(15, 5))
         for obs, ax in zip(observation, axes):
-            ax.matshow(obs * 10)
+            ax.matshow(obs * 100)
         plt.tight_layout()
         plt.show(block=True)
         return observation
