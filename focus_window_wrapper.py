@@ -1,11 +1,20 @@
 import gymnasium as gym
 import numpy as np
 from cleanrl.ppo_atari_utils import get_surrounding_window
+from gymnasium.spaces import Box
 
 class FocusWindowWrapper(gym.Wrapper):
     def __init__(self, env, window_size):
         super().__init__(env)
         self.window_size = window_size
+        window_low = self.observation_space.low[1]
+        window_high = self.observation_space.low[1]
+        new_low = np.concatenate([self.env.observation_space.low, window_low[None, ...]], axis=0)
+        new_high = np.concatenate([self.env.observation_space.high, window_high[None, ...]], axis=0)
+        self.observation_space = Box(
+            low=new_low, high=new_high, dtype=self.observation_space.dtype
+        )
+        pass
 
     def observation(self, obs, info):
         rel_obs = obs[1]
