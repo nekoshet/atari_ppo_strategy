@@ -122,8 +122,8 @@ def make_env(env_id, idx, capture_video, run_name):
         else:
             env = make_custom_base_env(env_id)
         env = gym.wrappers.RecordEpisodeStatistics(env)
-        env = KeyFrame(env, 3)
-        env = FocusWindowWrapper(env, 5)
+        # env = KeyFrame(env, 3)
+        # env = FocusWindowWrapper(env, 5)
         # env = DisplayObservation(env)
         return env
 
@@ -170,7 +170,7 @@ class Collector9x9Network(nn.Module):
     def __init__(self):
         super().__init__()
         self.network = nn.Sequential(
-            layer_init(nn.Conv2d(3, 64, 3, stride=3)),
+            layer_init(nn.Conv2d(2, 64, 3, stride=3)),
             nn.ReLU(),
             layer_init(nn.Conv2d(64, 64, 3, stride=3)),
             nn.ReLU(),
@@ -178,8 +178,8 @@ class Collector9x9Network(nn.Module):
         )
 
     def forward(self, x):
-        x = x[:, 1, ...]
-        x = np.swapaxes(x, 1, -1)
+        # x = x[:, 1, ...]
+        x = torch.swapaxes(x, 1, -1)
         return self.network(x)
 
     @staticmethod
@@ -195,10 +195,10 @@ class Agent(nn.Module):
         self.critic = layer_init(nn.Linear(self.network.output_size(), 1), std=1)
 
     def get_value(self, x):
-        return self.critic(self.network(x / 255.0))
+        return self.critic(self.network(x))
 
     def get_action_and_value(self, x, action=None):
-        hidden = self.network(x / 255.0)
+        hidden = self.network(x)
         logits = self.actor(hidden)
         probs = Categorical(logits=logits)
         if action is None:

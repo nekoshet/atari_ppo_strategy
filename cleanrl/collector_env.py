@@ -49,7 +49,7 @@ class CollectorEnv(gym.Env):
         self.observation_space = spaces.Box(
             low=0,
             high=1,
-            shape=(size, size, 3),
+            shape=(size, size, 2),
             dtype=np.uint8
         )
 
@@ -61,7 +61,7 @@ class CollectorEnv(gym.Env):
         self.rng = None
 
         # Initialize empty grid
-        self.grid = np.zeros((self.size, self.size, 3), dtype=np.uint8)
+        self.grid = np.zeros((self.size, self.size, 2), dtype=np.uint8)
 
     def _set_grid(self):
         self.grid.fill(0)
