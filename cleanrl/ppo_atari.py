@@ -122,8 +122,8 @@ def make_env(env_id, idx, capture_video, run_name):
         else:
             env = make_custom_base_env(env_id)
         env = gym.wrappers.RecordEpisodeStatistics(env)
-        # env = KeyFrame(env, 3)
-        # env = FocusWindowWrapper(env, 5)
+        env = KeyFrame(env, 3)
+        env = FocusWindowWrapper(env, 5)
         # env = DisplayObservation(env)
         return env
 
@@ -178,7 +178,7 @@ class Collector9x9Network(nn.Module):
         )
 
     def forward(self, x):
-        # x = x[:, 1, ...]
+        x = x[:, 1, ...]
         x = torch.swapaxes(x, 1, -1)
         return self.network(x)
 
