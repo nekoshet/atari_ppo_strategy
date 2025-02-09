@@ -1,6 +1,6 @@
 import gymnasium as gym
 import numpy as np
-from cleanrl.ppo_atari_utils import get_surrounding_window
+from ppo_atari_utils import get_surrounding_window
 from gymnasium.spaces import Box
 
 class FocusWindowWrapper(gym.Wrapper):
