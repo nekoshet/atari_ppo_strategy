@@ -20,7 +20,7 @@ from stable_baselines3.common.atari_wrappers import (  # isort:skip
     MaxAndSkipEnv,
     NoopResetEnv,
 )
-from cleanrl.collector_env import CollectorEnv
+from collector_env import CollectorEnv
 from key_frame_wrapper import KeyFrame
 from focus_window_wrapper import FocusWindowWrapper
 from display_observation_wrapper import DisplayObservation

@@ -1,7 +1,7 @@
 import gymnasium as gym
 import numpy as np
 from key_frame_wrapper import KeyFrame
-from focus_window_wrapper import FocusWindowWrapper
+from cleanrl.focus_window_wrapper import FocusWindowWrapper
 from display_observation_wrapper import DisplayObservation
 
 
