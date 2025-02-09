@@ -50,7 +50,7 @@ class Args:
     """the id of the environment"""
     network_id: str = "atari_network"
     """the id of the agent's underlying network"""
-    total_timesteps: int = 10000000
+    total_timesteps: int = 20000000
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
     """the learning rate of the optimizer"""
