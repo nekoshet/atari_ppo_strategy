@@ -221,6 +221,7 @@ class CollectorWindow5x5Network(nn.Module):
 
     def forward(self, x):
         x = x[:, 2, ...]
+        x = x[:, :5, :5]
         x = torch.swapaxes(x, 1, -1)
         return self.network(x)
 
