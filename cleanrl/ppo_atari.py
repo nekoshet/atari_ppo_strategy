@@ -179,7 +179,7 @@ class Collector9x9Network(nn.Module):
 
     def forward(self, x):
         x = x[:, 1, ...]
-        x = torch.swapaxes(x, 1, -1)
+        x = torch.moveaxis(x, -1, 1)
         return self.network(x)
 
     @staticmethod
@@ -200,7 +200,7 @@ class Collector9x9KeyFrameNetwork(nn.Module):
 
     def forward(self, x):
         x = x[:, 0, ...]
-        x = torch.swapaxes(x, 1, -1)
+        x = torch.moveaxis(x, -1, 1)
         return self.network(x)
 
     @staticmethod
@@ -222,7 +222,7 @@ class CollectorWindow5x5Network(nn.Module):
     def forward(self, x):
         x = x[:, 2, ...]
         x = x[:, :5, :5]
-        x = torch.swapaxes(x, 1, -1)
+        x = torch.moveaxis(x, -1, 1)
         return self.network(x)
 
     @staticmethod
