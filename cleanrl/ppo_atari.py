@@ -187,6 +187,48 @@ class Collector9x9Network(nn.Module):
         return 64
 
 
+class Collector9x9KeyFrameNetwork(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.network = nn.Sequential(
+            layer_init(nn.Conv2d(2, 64, 3, stride=3)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(64, 64, 3, stride=3)),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+    def forward(self, x):
+        x = x[:, 0, ...]
+        x = torch.swapaxes(x, 1, -1)
+        return self.network(x)
+
+    @staticmethod
+    def output_size():
+        return 64
+
+
+class CollectorWindow5x5Network(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.network = nn.Sequential(
+            layer_init(nn.Conv2d(2, 64, 3, stride=1)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(64, 64, 3, stride=1)),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+    def forward(self, x):
+        x = x[:, 2, ...]
+        x = torch.swapaxes(x, 1, -1)
+        return self.network(x)
+
+    @staticmethod
+    def output_size():
+        return 64
+
+
 class Agent(nn.Module):
     def __init__(self, network, envs):
         super().__init__()
@@ -215,7 +257,7 @@ if __name__ == "__main__":
     args.batch_size = int(args.num_envs * args.num_steps)
     args.minibatch_size = int(args.batch_size // args.num_minibatches)
     args.num_iterations = args.total_timesteps // args.batch_size
-    run_name = f"{args.env_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
+    run_name = f"{args.env_id}__{args.network_id}__{args.exp_name}__{args.seed}__{int(time.time())}"
     if args.track:
         import wandb
 
