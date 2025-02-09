@@ -167,12 +167,13 @@ class AtariNetwork(nn.Module):
 
 
 class Collector9x9Network(nn.Module):
-    def __init__(self):
+    def __init__(self, output_size=64):
         super().__init__()
-        self.network = nn.Sequential(
+        self._output_size = output_size
+        self._network = nn.Sequential(
             layer_init(nn.Conv2d(2, 64, 3, stride=3)),
             nn.ReLU(),
-            layer_init(nn.Conv2d(64, 64, 3, stride=3)),
+            layer_init(nn.Conv2d(64, self._output_size, 3, stride=3)),
             nn.ReLU(),
             nn.Flatten(),
         )
@@ -180,20 +181,20 @@ class Collector9x9Network(nn.Module):
     def forward(self, x):
         x = x[:, 1, ...]
         x = torch.moveaxis(x, -1, 1)
-        return self.network(x)
+        return self._network(x)
 
-    @staticmethod
-    def output_size():
-        return 64
+    def output_size(self):
+        return self._output_size
 
 
 class Collector9x9KeyFrameNetwork(nn.Module):
-    def __init__(self):
+    def __init__(self, output_size=64):
         super().__init__()
-        self.network = nn.Sequential(
+        self._output_size = output_size
+        self._network = nn.Sequential(
             layer_init(nn.Conv2d(2, 64, 3, stride=3)),
             nn.ReLU(),
-            layer_init(nn.Conv2d(64, 64, 3, stride=3)),
+            layer_init(nn.Conv2d(64, self._output_size, 3, stride=3)),
             nn.ReLU(),
             nn.Flatten(),
         )
@@ -201,20 +202,20 @@ class Collector9x9KeyFrameNetwork(nn.Module):
     def forward(self, x):
         x = x[:, 0, ...]
         x = torch.moveaxis(x, -1, 1)
-        return self.network(x)
+        return self._network(x)
 
-    @staticmethod
-    def output_size():
-        return 64
+    def output_size(self):
+        return self._output_size
 
 
 class CollectorWindow5x5Network(nn.Module):
-    def __init__(self):
+    def __init__(self, output_size=64):
         super().__init__()
-        self.network = nn.Sequential(
+        self._output_size = output_size
+        self._network = nn.Sequential(
             layer_init(nn.Conv2d(2, 64, 3, stride=1)),
             nn.ReLU(),
-            layer_init(nn.Conv2d(64, 64, 3, stride=1)),
+            layer_init(nn.Conv2d(64, self._output_size, 3, stride=1)),
             nn.ReLU(),
             nn.Flatten(),
         )
@@ -223,7 +224,23 @@ class CollectorWindow5x5Network(nn.Module):
         x = x[:, 2, ...]
         x = x[:, :5, :5]
         x = torch.moveaxis(x, -1, 1)
-        return self.network(x)
+        return self._network(x)
+
+    def output_size(self):
+        return self._output_size
+
+
+class Collector9x9KeyFrameWindowNetwork(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.key_frame_network = Collector9x9KeyFrameNetwork(output_size=32)
+        self.focus_window_network = CollectorWindow5x5Network(output_size=32)
+
+    def forward(self, x):
+        key_frame_res = self.key_frame_network(x)
+        focus_window_res = self.focus_window_network(x)
+        output = torch.concat([key_frame_res, focus_window_res], dim=-1)
+        return output
 
     @staticmethod
     def output_size():
