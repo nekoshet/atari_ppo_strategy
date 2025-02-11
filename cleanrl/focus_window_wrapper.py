@@ -14,7 +14,6 @@ class FocusWindowWrapper(gym.Wrapper):
         self.observation_space = Box(
             low=new_low, high=new_high, dtype=self.observation_space.dtype
         )
-        pass
 
     def observation(self, obs, info):
         rel_obs = obs[1]
