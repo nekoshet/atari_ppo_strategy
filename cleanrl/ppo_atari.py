@@ -159,7 +159,7 @@ class AtariNetwork(nn.Module):
         )
 
     def forward(self, x):
-        return self.network(x)
+        return self.network(x / 255.)
 
     @staticmethod
     def output_size():
