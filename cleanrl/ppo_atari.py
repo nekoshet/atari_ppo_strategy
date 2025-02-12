@@ -25,6 +25,8 @@ from key_frame_wrapper import KeyFrame
 from focus_window_wrapper import FocusWindowWrapper
 from display_observation_wrapper import DisplayObservation
 from alien_player_finder import AlienPlayerFinder
+from fire_reset_env_fixed import FireResetEnvFixed
+from focus_pos_resize_correction import FocusPosResizeCorrection
 
 
 @dataclass
@@ -110,11 +112,15 @@ def make_env(env_id, idx, capture_video, run_name):
         env = MaxAndSkipEnv(env, skip=4)
         env = EpisodicLifeEnv(env)
         if "FIRE" in env.unwrapped.get_action_meanings():
-            env = FireResetEnv(env)
+            env = FireResetEnvFixed(env)
         env = ClipRewardEnv(env)
+        env = FocusPosResizeCorrection(env, (84, 84))
         env = gym.wrappers.ResizeObservation(env, (84, 84))
-        env = gym.wrappers.GrayScaleObservation(env)
-        env = gym.wrappers.FrameStack(env, 4)
+        # env = gym.wrappers.GrayScaleObservation(env)
+        # env = gym.wrappers.FrameStack(env, 3)
+        env = KeyFrame(env, 3)
+        env = FocusWindowWrapper(env, 31)
+        env = DisplayObservation(env)
         return env
 
     def make_custom_env():
@@ -149,7 +155,7 @@ class AtariNetwork(nn.Module):
     def __init__(self):
         super().__init__()
         self.network = nn.Sequential(
-            layer_init(nn.Conv2d(4, 32, 8, stride=4)),
+            layer_init(nn.Conv2d(3, 32, 8, stride=4)),
             nn.ReLU(),
             layer_init(nn.Conv2d(32, 64, 4, stride=2)),
             nn.ReLU(),
@@ -161,6 +167,8 @@ class AtariNetwork(nn.Module):
         )
 
     def forward(self, x):
+        x = x[:, 0]
+        x = torch.moveaxis(x, -1, 1)
         return self.network(x / 255.)
 
     @staticmethod
