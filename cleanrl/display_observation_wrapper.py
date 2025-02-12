@@ -23,7 +23,7 @@ class DisplayObservation(gym.ObservationWrapper):
         return observation
 
     def observation(self, observation: ObsType) -> WrapperObsType:
-        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+        fig, axes = plt.subplots(1, 3, figsize=(12, 5))
         for obs, ax in zip(observation, axes):
             ax.matshow(obs)
         plt.tight_layout()
