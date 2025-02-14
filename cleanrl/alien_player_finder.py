@@ -1,9 +1,44 @@
 import gymnasium as gym
 import numpy as np
+from numba import jit
+import random
+from matplotlib import pyplot as plt
 
-PLAYER_COLOR = np.array([132, 144, 252], dtype=np.uint8)
-MIN_PLAYER_HEIGHT = 4
+PLAYER_GREEN_VALUE = 144
+GREEN_RGB_INDEX = 1
+MIN_PLAYER_HEIGHT = 7
 MAX_PLAYER_ROW = 172
+
+@jit(nopython=True)
+def find_vertical_line(img, target_g_value, k):
+    # get height, width
+    height, width = img.shape
+
+    # Early return if k is larger than image height
+    if k > height:
+        return -1, -1
+
+    # Iterate through each column
+    for x in range(width):
+        # Count consecutive matches
+        current_count = 0
+
+        # Check each pixel in the column
+        for y in range(height):
+            # Check value
+            if img[y, x] == target_g_value:
+                current_count += 1
+
+                # If we found k consecutive matches
+                if current_count == k:
+                    # Return coordinates of the start of the sequence
+                    return y - k + 1, x
+            else:
+                # Reset counter if we find a non-matching pixel
+                current_count = 0
+
+    # If no sequence found
+    return -1, -1
 
 class AlienPlayerFinder(gym.Wrapper):
     def __init__(self, env):
@@ -11,43 +46,28 @@ class AlienPlayerFinder(gym.Wrapper):
         self.last_player_position = np.zeros(2, dtype=int)
 
     @staticmethod
-    def _find_player_in_box(observation, min_row, max_row, min_column, max_column):
-        # Create a boolean mask where True indicates matching RGB values
-        matches = np.all(observation == PLAYER_COLOR, axis=2)
-
-        # For each column
-        for row in range(min_row, max_row - MIN_PLAYER_HEIGHT + 1):
-            for column in range(min_column, max_column):
-                if np.all(matches[row:row + MIN_PLAYER_HEIGHT, column]):
-                    return np.array([row, column])
-        return None
-
-    def _find_player(self, observation):
-        # first look near last location
-        top = max(self.last_player_position[0] - 10, 0)
-        bottom = max(self.last_player_position[0] + 20, MAX_PLAYER_ROW)
-        left = min(self.last_player_position[1] - 10, 0)
-        right = min(self.last_player_position[1] + 10, observation.shape[1])
-        player_pos = self._find_player_in_box(observation, top, bottom, left, right)
-        # if not found, look in all window
-        if player_pos is None:
-            player_pos = self._find_player_in_box(observation, 0, MAX_PLAYER_ROW,
-                                                  0, observation.shape[1])
-        return player_pos
+    def _find_player_location(observation):
+        pos = find_vertical_line(observation[:, :, GREEN_RGB_INDEX], PLAYER_GREEN_VALUE, MIN_PLAYER_HEIGHT)
+        return pos if pos != (-1, -1) else None
 
     def _set_player_location(self, observation):
-        player_pos = self._find_player(observation)
+        player_pos = self._find_player_location(observation[:MAX_PLAYER_ROW])
         if player_pos is not None:
             self.last_player_position = player_pos
 
+        # if random.random() < 0.01:
+        #     print(self.last_player_position)
+        #     plt.imshow(observation)
+        #     plt.show(block=True)
+
+        return self.last_player_position
+
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
-        self._set_player_location(obs)
-        info['focus_pos'] = self.last_player_position
+        info['focus_pos'] = self._set_player_location(obs)
         return obs, info
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
-        self._set_player_location(obs)
-        info['focus_pos'] = self.last_player_position
+        info['focus_pos'] = self._set_player_location(obs)
         return obs, reward, terminated, truncated, info
