@@ -119,7 +119,7 @@ def make_env(env_id, idx, capture_video, run_name):
         # env = gym.wrappers.FrameStack(env, 3)
         env = KeyFrame(env, 3)
         env = FocusWindowWrapper(env, 31)
-        env = DisplayObservation(env)
+        # env = DisplayObservation(env)
         return env
 
     def make_custom_env():
