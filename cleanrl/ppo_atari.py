@@ -25,7 +25,6 @@ from key_frame_wrapper import KeyFrame
 from focus_window_wrapper import FocusWindowWrapper
 from display_observation_wrapper import DisplayObservation
 from alien_player_finder import AlienPlayerFinder
-from fire_reset_env_fixed import FireResetEnvFixed
 from focus_pos_resize_correction import FocusPosResizeCorrection
 
 
@@ -106,14 +105,14 @@ def make_env(env_id, idx, capture_video, run_name):
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
             env = gym.make(env_id, frameskip=1)
-        env = AlienPlayerFinder(env)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = NoopResetEnv(env, noop_max=30)
         env = MaxAndSkipEnv(env, skip=4)
         env = EpisodicLifeEnv(env)
         if "FIRE" in env.unwrapped.get_action_meanings():
-            env = FireResetEnvFixed(env)
+            env = FireResetEnv(env)
         env = ClipRewardEnv(env)
+        env = AlienPlayerFinder(env)
         env = FocusPosResizeCorrection(env, (84, 84))
         env = gym.wrappers.ResizeObservation(env, (84, 84))
         # env = gym.wrappers.GrayScaleObservation(env)
