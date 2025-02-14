@@ -27,6 +27,8 @@ from display_observation_wrapper import DisplayObservation
 from alien_player_finder import AlienPlayerFinder
 from focus_pos_resize_correction import FocusPosResizeCorrection
 
+# constants
+ATARI_WINDOW_SIZE = 31
 
 @dataclass
 class Args:
@@ -118,7 +120,7 @@ def make_env(env_id, idx, capture_video, run_name):
         # env = gym.wrappers.GrayScaleObservation(env)
         # env = gym.wrappers.FrameStack(env, 3)
         env = KeyFrame(env, 3)
-        env = FocusWindowWrapper(env, 31)
+        env = FocusWindowWrapper(env, ATARI_WINDOW_SIZE)
         # env = DisplayObservation(env)
         return env
 
@@ -153,7 +155,7 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 class AtariNetwork(nn.Module):
     def __init__(self):
         super().__init__()
-        self.network = nn.Sequential(
+        self._network = nn.Sequential(
             layer_init(nn.Conv2d(3, 32, 8, stride=4)),
             nn.ReLU(),
             layer_init(nn.Conv2d(32, 64, 4, stride=2)),
@@ -168,7 +170,75 @@ class AtariNetwork(nn.Module):
     def forward(self, x):
         x = x[:, 0]
         x = torch.moveaxis(x, -1, 1)
-        return self.network(x / 255.)
+        return self._network(x / 255.)
+
+    @staticmethod
+    def output_size():
+        return 512
+
+
+class AtariKeyFrameNetwork(nn.Module):
+    def __init__(self, output_size=512):
+        super().__init__()
+        self._output_size = output_size
+        self._network = nn.Sequential(
+            layer_init(nn.Conv2d(3, 32, 8, stride=4)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(32, 64, 4, stride=2)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(64, 64, 3, stride=1)),
+            nn.ReLU(),
+            nn.Flatten(),
+            layer_init(nn.Linear(64 * 7 * 7, self._output_size)),
+            nn.ReLU(),
+        )
+
+    def forward(self, x):
+        x = x[:, 1]
+        x = torch.moveaxis(x, -1, 1)
+        return self._network(x / 255.)
+
+    def output_size(self):
+        return self._output_size
+
+
+class AtariWindowNetwork(nn.Module):
+    def __init__(self, output_size=512):
+        super().__init__()
+        self._output_size = output_size
+        self._network = nn.Sequential(
+            layer_init(nn.Conv2d(3, 32, 8, stride=4)),
+            nn.ReLU(),
+            layer_init(nn.Conv2d(32, 64, 4, stride=2)),
+            nn.ReLU(),
+            # layer_init(nn.Conv2d(64, 64, 3, stride=1)),
+            nn.ReLU(),
+            nn.Flatten(),
+            layer_init(nn.Linear(256, self._output_size)),
+            nn.ReLU(),
+        )
+
+    def forward(self, x):
+        x = x[:, 2]
+        x = x[:, :ATARI_WINDOW_SIZE, :ATARI_WINDOW_SIZE]
+        x = torch.moveaxis(x, -1, 1)
+        return self._network(x / 255.)
+
+    def output_size(self):
+        return self._output_size
+
+
+class AtariKeyFrameWindowNetwork(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self._key_frame_network = AtariKeyFrameNetwork(256)
+        self._window_network = AtariWindowNetwork(256)
+
+    def forward(self, x):
+        key_frame_res = self._key_frame_network(x)
+        window_res = self._window_network(x)
+        output = torch.cat([key_frame_res, window_res], dim=-1)
+        return output
 
     @staticmethod
     def output_size():
