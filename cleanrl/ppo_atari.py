@@ -28,6 +28,7 @@ from alien_player_finder import AlienPlayerFinder
 from focus_pos_resize_correction import FocusPosResizeCorrection
 
 # constants
+ATARI_KEY_FRAME_INTERVAL = 8
 ATARI_WINDOW_SIZE = 31
 
 @dataclass
@@ -119,7 +120,7 @@ def make_env(env_id, idx, capture_video, run_name):
         env = gym.wrappers.ResizeObservation(env, (84, 84))
         # env = gym.wrappers.GrayScaleObservation(env)
         # env = gym.wrappers.FrameStack(env, 3)
-        env = KeyFrame(env, 3)
+        env = KeyFrame(env, ATARI_KEY_FRAME_INTERVAL)
         env = FocusWindowWrapper(env, ATARI_WINDOW_SIZE)
         # env = DisplayObservation(env)
         return env
