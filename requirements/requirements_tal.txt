@@ -94,4 +94,4 @@ tyro==0.5.10
 urllib3==1.26.15
 wandb==0.13.11
 Werkzeug==2.2.3
-numba
+numba==0.61.0
