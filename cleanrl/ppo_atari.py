@@ -168,7 +168,7 @@ class AtariNetwork(nn.Module):
         )
 
     def forward(self, x):
-        x = x[:, 0]
+        x = x[:, 1]
         x = torch.moveaxis(x, -1, 1)
         return self._network(x / 255.)
 
@@ -194,7 +194,7 @@ class AtariKeyFrameNetwork(nn.Module):
         )
 
     def forward(self, x):
-        x = x[:, 1]
+        x = x[:, 0]
         x = torch.moveaxis(x, -1, 1)
         return self._network(x / 255.)
 
