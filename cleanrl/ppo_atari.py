@@ -55,7 +55,7 @@ class Args:
     """the id of the agent's underlying network"""
     key_frame_interval: int = 8
     """the interval between key frames"""
-    window_size: int = 31
+    window_size: int = 17
     """the size of the focus window"""
     total_timesteps: int = 20000000
     """total timesteps of the experiments"""
@@ -214,12 +214,12 @@ class AtariWindowNetwork(nn.Module):
         self._network = nn.Sequential(
             layer_init(nn.Conv2d(4, 32, 8, stride=4)),
             nn.ReLU(),
-            layer_init(nn.Conv2d(32, 64, 4, stride=2)),
+            layer_init(nn.Conv2d(32, 64, 3, stride=2)),
             nn.ReLU(),
             # layer_init(nn.Conv2d(64, 64, 3, stride=1)),
             nn.ReLU(),
             nn.Flatten(),
-            layer_init(nn.Linear(256, self._output_size)),
+            layer_init(nn.Linear(64, self._output_size)),
             nn.ReLU(),
         )
 
