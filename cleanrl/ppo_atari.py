@@ -28,9 +28,6 @@ from alien_player_finder import AlienPlayerFinder
 from focus_pos_resize_correction import FocusPosResizeCorrection
 from move_axis_wrapper import MoveAxisWrapper
 
-# constants
-ATARI_KEY_FRAME_INTERVAL = 8
-ATARI_WINDOW_SIZE = 31
 
 @dataclass
 class Args:
@@ -56,6 +53,10 @@ class Args:
     """the id of the environment"""
     network_id: str = "atari_network"
     """the id of the agent's underlying network"""
+    key_frame_interval: int = 8
+    """the interval between key frames"""
+    window_size: int = 31
+    """the size of the focus window"""
     total_timesteps: int = 20000000
     """total timesteps of the experiments"""
     learning_rate: float = 2.5e-4
@@ -102,7 +103,7 @@ def make_custom_base_env(env_id, **kwargs):
     return globals()[env_id](**kwargs)
 
 
-def make_env(env_id, idx, capture_video, run_name):
+def make_env(env_id, idx, key_frame_interval, window_size, capture_video, run_name):
     def make_atari_env():
         if capture_video and idx == 0:
             env = gym.make(env_id, render_mode="rgb_array", frameskip=1)
@@ -122,8 +123,8 @@ def make_env(env_id, idx, capture_video, run_name):
         env = gym.wrappers.GrayScaleObservation(env)
         env = gym.wrappers.FrameStack(env, 4)
         env = MoveAxisWrapper(env, 0, -1)
-        env = KeyFrame(env, ATARI_KEY_FRAME_INTERVAL)
-        env = FocusWindowWrapper(env, ATARI_WINDOW_SIZE)
+        env = KeyFrame(env, key_frame_interval)
+        env = FocusWindowWrapper(env, window_size)
         # env = DisplayObservation(env)
         return env
 
@@ -156,7 +157,7 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 
 
 class AtariNetwork(nn.Module):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__()
         self._network = nn.Sequential(
             layer_init(nn.Conv2d(4, 32, 8, stride=4)),
@@ -181,7 +182,7 @@ class AtariNetwork(nn.Module):
 
 
 class AtariKeyFrameNetwork(nn.Module):
-    def __init__(self, output_size=512):
+    def __init__(self, output_size=512, **kwargs):
         super().__init__()
         self._output_size = output_size
         self._network = nn.Sequential(
@@ -206,9 +207,10 @@ class AtariKeyFrameNetwork(nn.Module):
 
 
 class AtariWindowNetwork(nn.Module):
-    def __init__(self, output_size=512):
+    def __init__(self, output_size=512, **kwargs):
         super().__init__()
         self._output_size = output_size
+        self.window_size = kwargs['window_size']
         self._network = nn.Sequential(
             layer_init(nn.Conv2d(4, 32, 8, stride=4)),
             nn.ReLU(),
@@ -223,7 +225,7 @@ class AtariWindowNetwork(nn.Module):
 
     def forward(self, x):
         x = x[:, 2]
-        x = x[:, :ATARI_WINDOW_SIZE, :ATARI_WINDOW_SIZE]
+        x = x[:, :self.window_size, :self.window_size]
         x = torch.moveaxis(x, -1, 1)
         return self._network(x / 255.)
 
@@ -232,10 +234,10 @@ class AtariWindowNetwork(nn.Module):
 
 
 class AtariKeyFrameWindowNetwork(nn.Module):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super().__init__()
         self._key_frame_network = AtariKeyFrameNetwork(256)
-        self._window_network = AtariWindowNetwork(256)
+        self._window_network = AtariWindowNetwork(256, **kwargs)
 
     def forward(self, x):
         key_frame_res = self._key_frame_network(x)
@@ -348,8 +350,8 @@ class Agent(nn.Module):
         return action, probs.log_prob(action), probs.entropy(), self.critic(hidden)
 
 
-def get_network(network_id):
-    return globals()[network_id]()
+def get_network(network_id, **kwargs):
+    return globals()[network_id](**kwargs)
 
 
 if __name__ == "__main__":
@@ -387,11 +389,11 @@ if __name__ == "__main__":
 
     # env setup
     envs = gym.vector.SyncVectorEnv(
-        [make_env(args.env_id, i, args.capture_video, run_name) for i in range(args.num_envs)],
+        [make_env(args.env_id, i, args.key_frame_interval, args.window_size, args.capture_video, run_name) for i in range(args.num_envs)],
     )
     assert isinstance(envs.single_action_space, gym.spaces.Discrete), "only discrete action space is supported"
 
-    network = get_network(args.network_id)
+    network = get_network(args.network_id, window_size=args.window_size)
     agent = Agent(network, envs).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
