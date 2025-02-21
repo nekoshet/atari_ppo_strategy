@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 PLAYER_GREEN_VALUE = 144
 GREEN_RGB_INDEX = 1
 MIN_PLAYER_HEIGHT = 7
+PLAYER_HEIGHT = 10
 MAX_PLAYER_ROW = 172
 
 @jit(nopython=True)
@@ -48,6 +49,8 @@ class AlienPlayerFinder(gym.Wrapper):
     @staticmethod
     def _find_player_location(observation):
         pos = find_vertical_line(observation[:, :, GREEN_RGB_INDEX], PLAYER_GREEN_VALUE, MIN_PLAYER_HEIGHT)
+        if pos != (-1, -1):
+            pos = pos[0] + int(PLAYER_HEIGHT / 2), pos[1]
         return pos if pos != (-1, -1) else None
 
     def _set_player_location(self, observation):
