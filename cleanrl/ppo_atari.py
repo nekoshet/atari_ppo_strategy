@@ -53,7 +53,7 @@ class Args:
     """the id of the environment"""
     network_id: str = "atari_network"
     """the id of the agent's underlying network"""
-    key_frame_interval: int = 8
+    key_frame_interval: int = 16
     """the interval between key frames"""
     window_size: int = 17
     """the size of the focus window"""
