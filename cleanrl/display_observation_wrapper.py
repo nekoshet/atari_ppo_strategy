@@ -7,25 +7,29 @@ from matplotlib import pyplot as plt
 
 
 class DisplayObservation(gym.ObservationWrapper):
-    def observation_image(self, observation: ObsType) -> WrapperObsType:
+    def observation(self, observation: ObsType) -> WrapperObsType:
+        self.show_images(observation)
+        return observation
+
+    @staticmethod
+    def show_image(observation: ObsType):
         plt.matshow(observation)
         plt.tight_layout()
         plt.show(block=True)
-        return observation
 
-    def observation_collector_3(self, observation: ObsType) -> WrapperObsType:
+    @staticmethod
+    def show_collector_3(observation: ObsType):
         fig, axes = plt.subplots(1, 3, figsize=(15, 5))
         for obs, ax in zip(observation, axes):
             obs = np.concatenate([obs, np.zeros_like(obs[..., 0])[..., None]], axis=-1)
             ax.matshow(obs * 100)
         plt.tight_layout()
         plt.show(block=True)
-        return observation
 
-    def observation(self, observation: ObsType) -> WrapperObsType:
+    @staticmethod
+    def show_images(observation: ObsType):
         fig, axes = plt.subplots(1, 3, figsize=(12, 5))
         for obs, ax in zip(observation, axes):
             ax.matshow(obs)
         plt.tight_layout()
         plt.show(block=True)
-        return observation
